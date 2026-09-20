@@ -24,6 +24,9 @@
 #define PIN1_pin 34
 #define PIN1_port P3_4
 
+#define CFG_pin 35
+#define CFG_port P3_5
+
 volatile unsigned char TimerExpired = 0;
 volatile unsigned char CurrPinStatus = 0;
 volatile unsigned char PrevPinStatus = 0;
@@ -31,9 +34,59 @@ volatile unsigned char PrevPinStatus = 0;
 volatile unsigned char PinMaskCounter0 = 0;
 volatile unsigned char PinMaskCounter1 = 0;
 
-/* due to limitation of library, no Ctrl key support */
-#define PIN0_KEY '['
-#define PIN1_KEY ']'
+static void send_key(unsigned char);
+static void send_mod(unsigned char);
+static void (*send_func)(unsigned char) = send_key;
+
+/* src/userUsbHidKeyboard/USBHIDKeyboard.c: asciimap[] */
+#define PIN0_KEY 0x2f
+#define PIN1_KEY 0x30
+
+/* src/userUsbHidKeyboard/USBconstant.c: ReportDescriptor[] */
+#define LeftCtrl 0x01
+#define LeftShift 0x02
+#define LeftAlt 0x04
+#define LeftGUI 0x08
+#define RightCtrl 0x10
+#define RightShift 0x20
+#define RightAlt 0x40
+#define RightGUI 0x80
+
+#define PIN0_MOD LeftCtrl
+#define PIN1_MOD RightCtrl
+
+/* src/userUsbHidKeyboard/USBHIDKeyboard.c */
+#define HIDKey_size 8
+extern __xdata uint8_t HIDKey[HIDKey_size];
+extern uint8_t USB_EP1_send(void);
+
+/* src/userUsbHidKeyboard/USBhandler.c */
+extern uint8_t USB_RemoteWakeup();
+
+static void send_key(unsigned char status)
+{
+	uint8_t *p = &HIDKey[2];
+
+	if (status & PIN0_ON) *p++ = PIN0_KEY;
+	if (status & PIN1_ON) *p = PIN1_KEY;
+}
+
+static void send_mod(unsigned char status)
+{
+	if (status & PIN0_ON) HIDKey[0] |= PIN0_MOD;
+	if (status & PIN1_ON) HIDKey[0] |= PIN1_MOD;
+}
+
+static void send_usb(unsigned char status)
+{
+	// XXX always send key event even if it was used for wakeup
+	USB_RemoteWakeup();
+
+	memset(HIDKey, 0, HIDKey_size);
+	(*send_func)(status);
+
+	USB_EP1_send();
+}
 
 static void update_pin_status(void)
 {
@@ -76,20 +129,56 @@ void timer_init(void)
 	TR2 = 1; // start Timer2
 }
 
+static void display_status(char *str)
+{
+#define DOT_TIME 100
+
+	for (; *str; str++) {
+		LED_port = 1;
+		delay(DOT_TIME * ((*str == '-') ? 3 : 1));
+		LED_port = 0;
+		delay(DOT_TIME);
+	}
+
+	delay(DOT_TIME * 2);
+}
+
+static void mode_config(void)
+{
+	bool mode;
+
+	mode = (!PIN0_port ^ !CFG_port);
+
+	// same code length and distinguish with last element
+	if (mode) {
+		display_status("..-");
+		send_func = send_mod;
+	} else {
+		display_status("-..");
+		send_func = send_key;
+	}
+
+	while(!PIN0_port); // wait for key release
+}
+
 void setup(void)
 {
 	pinMode(PIN0_pin, INPUT_PULLUP);
 	pinMode(PIN1_pin, INPUT_PULLUP);
+	pinMode(CFG_pin, INPUT_PULLUP);
 	pinMode(LED_pin, OUTPUT);
+	LED_port = 0; // LED is on at boot
+	delay(50);
 
+	mode_config();
 	timer_init();
 	USBInit();
 }
 
 void loop(void)
 {
-	unsigned char changed, useprev;
-	signed char pin0, pin1;
+	unsigned char changed, useprev, status;
+	bool send;
 
 	while (!TimerExpired);
 
@@ -98,27 +187,24 @@ void loop(void)
 	changed = (CurrPinStatus ^ PrevPinStatus) & PIN_MASK;
 	useprev = ((PinMaskCounter0 ? PIN0_ON : 0) |
 		   (PinMaskCounter1 ? PIN1_ON : 0));
-	pin0 = pin1 = 0;
+	status = 0;
+	send = false;
 
 	if (changed ^ useprev) {
-		PrevPinStatus =
+		PrevPinStatus = status =
 			(PrevPinStatus & useprev) | (CurrPinStatus & ~useprev);
 		if (changed & ~useprev & PIN0_ON) {
 			PinMaskCounter0 = PinMaskCount;
-			pin0 = (CurrPinStatus & PIN0_ON) ? 1 : -1;
+			send = true;
 		}
 		if (changed & ~useprev & PIN1_ON) {
 			PinMaskCounter1 = PinMaskCount;
-			pin1 = (CurrPinStatus & PIN1_ON) ? 1 : -1;
+			send = true;
 		}
 	}
 	TimerExpired = 0;
 
 	EA = 1; // enable interupt
 
-	if (pin0 < 0) Keyboard_release(PIN0_KEY);
-	else if (pin0 > 0) Keyboard_press(PIN0_KEY);
-		
-	if (pin1 < 0) Keyboard_release(PIN1_KEY);
-	else if (pin1 > 0) Keyboard_press(PIN1_KEY);
+	if (send) send_usb(status);
 }
