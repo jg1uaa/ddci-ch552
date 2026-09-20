@@ -37,5 +37,5 @@ CH552 Board
 
 ## License
 
-ddci-ch552.ino: GPL v3.0 or later
-codes from CH55xduino: LGPL v2.1
+- ddci-ch552.ino: GPL v3.0 or later
+- codes from CH55xduino: LGPL v2.1
