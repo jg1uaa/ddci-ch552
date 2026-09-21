@@ -184,23 +184,20 @@ void loop(void)
 
 	EA = 0; // disable interrupt
 
-	changed = (CurrPinStatus ^ PrevPinStatus) & PIN_MASK;
+	changed = CurrPinStatus ^ PrevPinStatus;
 	useprev = ((PinMaskCounter0 ? PIN0_ON : 0) |
 		   (PinMaskCounter1 ? PIN1_ON : 0));
-	status = 0;
 	send = false;
 
-	if (changed ^ useprev) {
-		PrevPinStatus = status =
-			(PrevPinStatus & useprev) | (CurrPinStatus & ~useprev);
-		if (changed & ~useprev & PIN0_ON) {
-			PinMaskCounter0 = PinMaskCount;
-			send = true;
-		}
-		if (changed & ~useprev & PIN1_ON) {
-			PinMaskCounter1 = PinMaskCount;
-			send = true;
-		}
+	PrevPinStatus = status =
+		(PrevPinStatus & useprev) | (CurrPinStatus & ~useprev);
+	if (changed & ~useprev & PIN0_ON) {
+		PinMaskCounter0 = PinMaskCount;
+		send = true;
+	}
+	if (changed & ~useprev & PIN1_ON) {
+		PinMaskCounter1 = PinMaskCount;
+		send = true;
 	}
 	TimerExpired = 0;
 
