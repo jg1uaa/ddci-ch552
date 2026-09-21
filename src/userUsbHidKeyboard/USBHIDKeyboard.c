@@ -17,7 +17,7 @@ extern __xdata uint8_t keyboardLedStatus;
 volatile __xdata uint8_t UpPoint1_Busy =
     0; // Flag of whether upload pointer is busy
 
-__xdata uint8_t HIDKey[8] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+__xdata uint8_t HIDKey[KEYBOARD_EPSIZE] = {0x0};
 
 #define SHIFT 0x80
 __code uint8_t _asciimap[128] = {
@@ -208,6 +208,7 @@ uint8_t USB_EP1_send() {
   return 1;
 }
 
+#if 0 // disabled
 uint8_t Keyboard_press(__data uint8_t k) {
   if (USB_RemoteWakeup()) {
     // Don't register this key press - it was used for wakeup
@@ -311,3 +312,4 @@ uint8_t Keyboard_getLEDStatus() {
   // keyboardLedStatus is updated from USB_EP0_OUT
   return keyboardLedStatus;
 }
+#endif

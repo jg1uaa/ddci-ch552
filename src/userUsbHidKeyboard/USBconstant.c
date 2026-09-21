@@ -52,8 +52,8 @@ __code USB_Descriptor_Configuration_t ConfigurationDescriptor = {
                       .TotalEndpoints = 1,
 
                       .Class = HID_CSCP_HIDClass,
-                      .SubClass = HID_CSCP_BootSubclass,
-                      .Protocol = HID_CSCP_KeyboardBootProtocol,
+                      .SubClass = 0,
+                      .Protocol = 0,
 
                       .InterfaceStrIndex = NO_DESCRIPTOR},
 
@@ -64,7 +64,7 @@ __code USB_Descriptor_Configuration_t ConfigurationDescriptor = {
                         .CountryCode = 0x00,
                         .TotalReportDescriptors = 1,
                         .HIDReportType = HID_DTYPE_Report,
-                        .HIDReportLength = sizeof(ReportDescriptor)},
+                        .HIDReportLength = sizeof(ReportDescriptor_bracket)},
 
     .HID_ReportINEndpoint = {.Header = {.Size =
                                             sizeof(USB_Descriptor_Endpoint_t),
@@ -89,42 +89,44 @@ __code USB_Descriptor_Configuration_t ConfigurationDescriptor = {
                               .PollingIntervalMS = 1},*/
 };
 
-__code uint8_t ReportDescriptor[] = {
+__code uint8_t ReportDescriptor_bracket[] = {
     0x05, 0x01, // USAGE_PAGE (Generic Desktop)
     0x09, 0x06, // USAGE (Keyboard)
     0xa1, 0x01, // COLLECTION (Application)
     0x05, 0x07, //   USAGE_PAGE (Keyboard)
-    0x19, 0xe0, //   USAGE_MINIMUM (Keyboard LeftControl)
-    0x29, 0xe7, //   USAGE_MAXIMUM (Keyboard Right GUI)
+    0x09, 0x2f, //   USAGE (Keyboard [ and {)
+    0x09, 0x30, //   USAGE (Keyboard ] and })
     0x15, 0x00, //   LOGICAL_MINIMUM (0)
     0x25, 0x01, //   LOGICAL_MAXIMUM (1)
-    0x95, 0x08, //   REPORT_COUNT (8)
+    0x95, 0x02, //   REPORT_COUNT (2)
     0x75, 0x01, //   REPORT_SIZE (1)
     0x81, 0x02, //   INPUT (Data,Var,Abs)
     0x95, 0x01, //   REPORT_COUNT (1)
-    0x75, 0x08, //   REPORT_SIZE (8)
+    0x75, 0x06, //   REPORT_SIZE (6)
     0x81, 0x03, //   INPUT (Cnst,Var,Abs)
-    0x95, 0x06, //   REPORT_COUNT (6)
-    0x75, 0x08, //   REPORT_SIZE (8)
-    0x15, 0x00, //   LOGICAL_MINIMUM (0)
-    0x25, 0xff, //   LOGICAL_MAXIMUM (255)
-    0x05, 0x07, //   USAGE_PAGE (Keyboard)
-    0x19, 0x00, //   USAGE_MINIMUM (Reserved (no event indicated))
-    0x29, 0xe7, //   USAGE_MAXIMUM (Keyboard Right GUI)
-    0x81, 0x00, //   INPUT (Data,Ary,Abs)
-    0x05, 0x08, //   USAGE_PAGE (LEDs)
-    0x19, 0x01, //   USAGE_MINIMUM (Num Lock)
-    0x29, 0x05, //   USAGE_MAXIMUM (Kana)
-    0x15, 0x00, //   LOGICAL_MINIMUM (0)
-    0x25, 0x01, //   LOGICAL_MAXIMUM (1)
-    0x95, 0x05, //   REPORT_COUNT (5)
-    0x75, 0x01, //   REPORT_SIZE (1)
-    0x91, 0x02, //   OUTPUT (Data,Var,Abs)
-    0x95, 0x01, //   REPORT_COUNT (1)
-    0x75, 0x03, //   REPORT_SIZE (3)
-    0x91, 0x03, //   OUTPUT (Cnst,Var,Abs)
     0xc0        // END_COLLECTION
 };
+
+// must be same size as ReportDescriptor_bracket
+__code uint8_t ReportDescriptor_ctrl[] = {
+    0x05, 0x01, // USAGE_PAGE (Generic Desktop)
+    0x09, 0x06, // USAGE (Keyboard)
+    0xa1, 0x01, // COLLECTION (Application)
+    0x05, 0x07, //   USAGE_PAGE (Keyboard)
+    0x09, 0xe0, //   USAGE (Keyboard LeftControl)
+    0x09, 0xe4, //   USAGE (Keyboard RightControl)
+    0x15, 0x00, //   LOGICAL_MINIMUM (0)
+    0x25, 0x01, //   LOGICAL_MAXIMUM (1)
+    0x95, 0x02, //   REPORT_COUNT (2)
+    0x75, 0x01, //   REPORT_SIZE (1)
+    0x81, 0x02, //   INPUT (Data,Var,Abs)
+    0x95, 0x01, //   REPORT_COUNT (1)
+    0x75, 0x06, //   REPORT_SIZE (6)
+    0x81, 0x03, //   INPUT (Cnst,Var,Abs)
+    0xc0        // END_COLLECTION
+};
+
+__code uint8_t *ReportDescriptor = ReportDescriptor_bracket;
 
 // String Descriptors
 __code uint8_t LanguageDescriptor[] = {0x04, 0x03, 0x09,

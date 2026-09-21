@@ -34,57 +34,25 @@ volatile unsigned char PrevPinStatus = 0;
 volatile unsigned char PinMaskCounter0 = 0;
 volatile unsigned char PinMaskCounter1 = 0;
 
-static void send_key(unsigned char);
-static void send_mod(unsigned char);
-static void (*send_func)(unsigned char) = send_key;
-
-/* src/userUsbHidKeyboard/USBHIDKeyboard.c: asciimap[] */
-#define PIN0_KEY 0x2f
-#define PIN1_KEY 0x30
-
-/* src/userUsbHidKeyboard/USBconstant.c: ReportDescriptor[] */
-#define LeftCtrl 0x01
-#define LeftShift 0x02
-#define LeftAlt 0x04
-#define LeftGUI 0x08
-#define RightCtrl 0x10
-#define RightShift 0x20
-#define RightAlt 0x40
-#define RightGUI 0x80
-
-#define PIN0_MOD LeftCtrl
-#define PIN1_MOD RightCtrl
-
 /* src/userUsbHidKeyboard/USBHIDKeyboard.c */
-#define HIDKey_size 8
+#define HIDKey_size 1
 extern __xdata uint8_t HIDKey[HIDKey_size];
 extern uint8_t USB_EP1_send(void);
 
 /* src/userUsbHidKeyboard/USBhandler.c */
 extern uint8_t USB_RemoteWakeup();
 
-static void send_key(unsigned char status)
-{
-	uint8_t *p = &HIDKey[2];
-
-	if (status & PIN0_ON) *p++ = PIN0_KEY;
-	if (status & PIN1_ON) *p = PIN1_KEY;
-}
-
-static void send_mod(unsigned char status)
-{
-	if (status & PIN0_ON) HIDKey[0] |= PIN0_MOD;
-	if (status & PIN1_ON) HIDKey[0] |= PIN1_MOD;
-}
+/* src/userUsbHidKeyboard/USBconstant.c */
+extern __code uint8_t ReportDescriptor_bracket[];
+extern __code uint8_t ReportDescriptor_ctrl[];
+extern __code uint8_t *ReportDescriptor;
 
 static void send_usb(unsigned char status)
 {
 	// XXX always send key event even if it was used for wakeup
 	USB_RemoteWakeup();
 
-	memset(HIDKey, 0, HIDKey_size);
-	(*send_func)(status);
-
+	HIDKey[0] = status;
 	USB_EP1_send();
 }
 
@@ -149,13 +117,13 @@ static void mode_config(void)
 
 	mode = (!PIN0_port ^ !CFG_port);
 
-	// same code length and distinguish with last element
+	// same code length
 	if (mode) {
-		display_status("..-");
-		send_func = send_mod;
+		display_status("--");
+		ReportDescriptor = ReportDescriptor_ctrl;
 	} else {
-		display_status("-..");
-		send_func = send_key;
+		display_status("....");
+		ReportDescriptor = ReportDescriptor_bracket;
 	}
 
 	while(!PIN0_port); // wait for key release
