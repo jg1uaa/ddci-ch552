@@ -3,6 +3,7 @@
 ## Description
 
 Telegraph key interface for PC, using WinChipHead's CH552.
+1000Hz sampling and transfer.
 
 ## Prerequisities
 
